@@ -1,7 +1,8 @@
 # qex
-support library for quantum experiment
 
-- supported experimetns
+Library for supproting your quantum experiment.
+
+- Supported experimetns
   - randomized benchmarking
   - direct fidelity estimation
   - direct energy estimation
