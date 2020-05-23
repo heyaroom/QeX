@@ -8,3 +8,5 @@ Library for supproting your quantum experiment.
   - direct energy estimation
   - variational quantum gate optimization
   - variational quantum eigensolver
+
+On development...
