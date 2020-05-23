@@ -1,4 +1,4 @@
-# qex
+# QeX
 
 Library for supproting your quantum experiment.
 
