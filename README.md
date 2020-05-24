@@ -10,5 +10,5 @@ Library for supproting your quantum experiment.
   - variational quantum eigensolver
   - subspace-search variational quantum eigensolver
 
-On development...
-2020/05/23
+- To Do
+  - add more detail condition on dataset (projector dataset id, clique index)
