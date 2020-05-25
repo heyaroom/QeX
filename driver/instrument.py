@@ -2,6 +2,12 @@ from .util import name_to_alpha
 from measurement_tool.units import MHz, GHz, ns, us, dB
 
 def set_qubit(instrument, qubit_notes, qubit_information):
+    """Setup of the instruments used in the experiment
+    Args:
+        instrument (TimeDomainInstrumentManager): Instruments used in the experiment
+        qubit_notes (AttributionDict): Calibration notes for single-qubit control
+        qubit_information (list): List of the qubit names
+    """
     for qubit_name in qubit_information:
         note                                              = qubit_notes[qubit_name]
         instrument.pma.config[qubit_name+"_readout"].freq = note.cavity_readout_window_frequency
@@ -32,6 +38,12 @@ def set_qubit(instrument, qubit_notes, qubit_information):
             instrument.seq.set_user_command("MEAS{0}".format(alpha), "A{0} T B10 M F3000".format(note.cavity_readout_window_power))
 
 def set_cross(instrument, cross_notes, cross_information):
+    """Setup of the instruments used in the experiment
+    Args:
+        instrument (TimeDomainInstrumentManager): Instruments used in the experiment
+        cross_notes (AttributionDict): Calibration notes for two-qubit control
+        cross_information (list): List of the cross-resonance port names
+    """
     for cross_name in cross_information:
         if str(cross_name) in cross_notes.keys():
             note = cross_notes[str(cross_name)]
@@ -49,7 +61,17 @@ def set_cross(instrument, cross_notes, cross_information):
             instrument.seq.set_user_command("DICR{0}{1}".format(calpha, talpha), "B{0} A{1} P{2} F{3} B{0}".format(note.crw["ns"], note.cra, note.crp+180, note.crt["ns"]))
             instrument.seq.set_user_command("DICT{0}{1}".format(calpha, talpha), "B{0} A{1} P{2} F{3} B{0}".format(note.crw["ns"], note.cta, note.ctp+180, note.crt["ns"]))
 
-def do_experiment(target_qubit_list, pulse_dist, shot_number, dataset_name="test"):
+def do_experiment(instrument, target_qubit_list, pulse_dict, shot_number, dataset_name="test"):
+    """Execute the experiment
+    Args:
+        instrument (TimeDomainInstrumentManager): Instruments used in the experiment
+        target_qubit_list (list): List of the qubit name used in the experiment
+        pulse_dict (dict): Dictionary contained the list of the pulse sequences used in the experiment
+        shot_number (int): Number of the shots in the experiment
+        dataset_name (str): Name of the experiment saved in the DataVault
+    Returns:
+        dataset (DataSet): Experimental results
+    """
     sweep_id   = 0
     sweep_axis = []
 	for idx, qubit_name in enumerate(target_qubit_list):
