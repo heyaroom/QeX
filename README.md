@@ -12,6 +12,7 @@ Library for supproting following experiments.
 ## Example
 ```python
 from QeX.driver import ExpBase, Circuit
+from QeX.util.group import CliffordGroup
 from QeX.experiments import RandomizedBenchmarking, DirectFidelityEstimation
 
 # 1. Create circuit
