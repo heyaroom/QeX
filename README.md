@@ -1,6 +1,6 @@
 # QeX
 
-Library for supproting your quantum experiment.
+Library for supproting following experiments.
 
 - Supported experimetns
   - [Randomized benchmarking](https://arxiv.org/abs/0707.0963)
@@ -10,5 +10,5 @@ Library for supproting your quantum experiment.
   - [Subspace-search variational quantum eigensolver](https://arxiv.org/abs/1810.09434)
 
 - To Do
-  - add more detail condition on dataset (projector dataset id, clique index)
-  - generalize the driver
+  - Add more detail condition on dataset (projector dataset id, clique index)
+  - Generalize the driver
