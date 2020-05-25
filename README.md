@@ -31,10 +31,14 @@ rb = RandomizedBenchmarking(
   interleaved   = None
 )
 
-# 3. Execute the experiment
+# 3. Define take_data function to meet with your envirionment
+def take_data(job_table):
+  pass
+  
+# 4. Execute experiments
 rb.execute(take_data)
 
-# 4. Make & Show the report
+# 5. Make & Show the report
 rb.make_data_table()
 rb.make_report()
 rb.show_report()
