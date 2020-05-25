@@ -14,12 +14,11 @@ Library for supproting following experiments.
 from QeX.driver import ExpBase, MitigatedBase, Circuit
 from QeX.experiments import RandomizedBenchmarking, DirectFidelityEstimation
 
+# 1. Create circuit
 exp = MitigatedBase(qubit_name_list, cross_name_list)
 cir = Circuit(exp)
 
-def ansatz(cir):
-    pass
-
+# 2. Declare the experiment
 rb = RandomizedBenchmarking(
   circuit       = cir,
   group         = CliffordGroup(1),
@@ -28,14 +27,13 @@ rb = RandomizedBenchmarking(
   interleaved   = None
 )
 
-dfe = DirectFidelityEstimation(
-    ansatz                = ansatz,
-    circuit               = cir,
-    gate_notation         = qt.rand_unitary(2).full(),
-    stabilizer_prep       = [],
-    stabilizer_meas       = [],
-    clique_cover_strategy = "clique_approx_find_greedy_eliminate"
-)
+# 3. Execute the experiment
+rb.execute(take_data)
+
+# 4. Make & Show the report
+rb.make_data_table()
+rb.make_report()
+rb.show_report()
 ```
 
 ## To Do
