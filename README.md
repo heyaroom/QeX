@@ -11,11 +11,11 @@ Library for supproting following experiments.
 
 ## Example
 ```python
-from QeX.driver import ExpBase, MitigatedBase, Circuit
+from QeX.driver import ExpBase, Circuit
 from QeX.experiments import RandomizedBenchmarking, DirectFidelityEstimation
 
 # 1. Create circuit
-exp = MitigatedBase(qubit_name_list, cross_name_list)
+exp = ExpBase(qubit_name_list, cross_name_list)
 cir = Circuit(exp)
 
 # 2. Declare the experiment
