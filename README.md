@@ -2,19 +2,16 @@
 
 Library for supproting following experiments.
 
-- Supported experimetns
+## Supported experimetns
   - [Randomized benchmarking](https://arxiv.org/abs/0707.0963)
   - [Direct fidelity estimation](https://arxiv.org/abs/1104.4695)
   - [Variational quantum gate optimization](https://arxiv.org/abs/1810.12745)
   - [Variational quantum eigensolver](https://arxiv.org/abs/1304.3061)
   - [Subspace-search variational quantum eigensolver](https://arxiv.org/abs/1810.09434)
 
-- To Do
-  - Add more detail condition on dataset (projector dataset id, clique index)
-  - Generalize the driver
-
-- Example
-'''from QeX.driver import ExpBase, MitigatedBase, Circuit
+## Example
+```python
+from QeX.driver import ExpBase, MitigatedBase, Circuit
 from QeX.experiments import RandomizedBenchmarking, DirectFidelityEstimation
 
 exp = MitigatedBase(qubit_name_list, cross_name_list)
@@ -39,4 +36,8 @@ dfe = DirectFidelityEstimation(
     stabilizer_meas       = [],
     clique_cover_strategy = "clique_approx_find_greedy_eliminate"
 )
-  '''
+```
+
+## To Do
+  - Add more detail condition on dataset (projector dataset id, clique index)
+  - Generalize the driver
