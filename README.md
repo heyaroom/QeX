@@ -12,3 +12,31 @@ Library for supproting following experiments.
 - To Do
   - Add more detail condition on dataset (projector dataset id, clique index)
   - Generalize the driver
+
+- Example
+'''from QeX.driver import ExpBase, MitigatedBase, Circuit
+from QeX.experiments import RandomizedBenchmarking, DirectFidelityEstimation
+
+exp = MitigatedBase(qubit_name_list, cross_name_list)
+cir = Circuit(exp)
+
+def ansatz(cir):
+    pass
+
+rb = RandomizedBenchmarking(
+  circuit       = cir,
+  group         = CliffordGroup(1),
+  sequence_list = [(0,10,1000), (2,10,1000), (4,10,1000)],
+  seed          = 0,
+  interleaved   = None
+)
+
+dfe = DirectFidelityEstimation(
+    ansatz                = ansatz,
+    circuit               = cir,
+    gate_notation         = qt.rand_unitary(2).full(),
+    stabilizer_prep       = [],
+    stabilizer_meas       = [],
+    clique_cover_strategy = "clique_approx_find_greedy_eliminate"
+)
+  '''
