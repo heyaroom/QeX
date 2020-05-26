@@ -16,7 +16,7 @@ Please clone and use the package directly
 ```python
 from QeX.driver import ExpBase, Circuit
 from QeX.util.group import CliffordGroup
-from QeX.experiments import RandomizedBenchmarking, DirectFidelityEstimation
+from QeX.experiments import RandomizedBenchmarking
 
 # 1. Create circuit
 exp = ExpBase(qubit_name_list, cross_name_list)
