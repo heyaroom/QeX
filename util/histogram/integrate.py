@@ -2,7 +2,7 @@ import re
 
 def expect_pauli(pauli, histogram):
     remove_idx = find_identity(pauli)
-    expected_value = integrate_histogram(histogram, remove_idx)
+    expected_value = integrate_histogram(remove_idx, histogram)
     return expected_value
 
 def find_identity(pauli):
