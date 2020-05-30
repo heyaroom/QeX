@@ -89,9 +89,12 @@ class RandomizedBenchmarking:
 
         a0 = 1 - 2**(-self.number_of_qubit)
         b0 = 2**(-self.number_of_qubit)
-        _x = self.length_list
-        _y = np.log(self.pauli_ave - b0)
-        p0 = np.exp(np.polyfit(_x, _y, 1)[0])
+        _x = np.array(self.length_list)
+        _f = (self.pauli_ave - b0)/a0
+        _x = _x[np.where(_f>0)]
+        _f = _f[np.where(_f>0)]
+        _y = np.log(_f)
+        p0 = np.exp(np.mean(np.gradient(_y,_x)))
 
         popt, pcov = curve_fit(exp_decay,self.length_list,self.pauli_ave,p0=[a0,b0,p0])
 
