@@ -48,7 +48,7 @@ class DirectFidelityEstimation:
         self.de.execute(take_data)
 
     def analyze(self):
-        self.de.make_report()
+        self.de.make_data_table()
 
         ptm_ansatz = {}
         for clique_label, clique_nodes in self.ptm_target.clique_dict.items():
