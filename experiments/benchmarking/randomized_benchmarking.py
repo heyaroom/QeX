@@ -80,7 +80,7 @@ class RandomizedBenchmarking:
         self.data_table = {}
         for length in self.length_list:
             self.data_table[length] = []
-        for job in self.job_table:
+        for job in self.job_table.table:
             self.data_table[job.length].append(job.result["0"*self.number_of_qubit])
 
     def make_report(self):
@@ -106,11 +106,10 @@ class RandomizedBenchmarking:
         xfit = np.linspace(0,self.length_list[-1],1001)
         yfit = exp_decay(xfit,self.a,self.b,self.p)
         plt.plot(xfit,yfit,'r-')
-        plt.errorbar(x=self.length_list,y=self.pauli_mean,yerr=self.pauli_std,fmt='k.')
+        plt.errorbar(x=self.length_list,y=self.pauli_ave,yerr=self.pauli_std,fmt='k.')
         plt.xlabel('Sequence length')
         plt.ylabel("Population")
         plt.ylim(-0.1,1.1)
-        plt.legend()
         plt.show()
 
     def reset(self):
