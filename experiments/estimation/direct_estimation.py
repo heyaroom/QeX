@@ -38,7 +38,7 @@ class DirectEstimation:
 
     def make_data_table(self):
         self.data_table = {}
-        for job in self.job_table:
+        for job in self.job_table.table:
             if (job.prep_pauli, job.meas_pauli) not in self.data_table.keys():
                 self.data_table[(job.prep_pauli, job.meas_pauli)] = {}
             self.data_table[(job.prep_pauli, job.meas_pauli)][job.prep_index] = job.result
