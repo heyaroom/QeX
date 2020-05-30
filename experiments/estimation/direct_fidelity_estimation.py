@@ -59,7 +59,7 @@ class DirectFidelityEstimation:
                     expected_value = expect_pauli(meas_pauli, meas_histogram)
                     prep_histogram[prep_index] = expected_value
                 expected_value = expect_pauli(prep_pauli, prep_histogram)
-            ptm_ansatz[node] = expected_value/(2**self.number_of_qubit)
+                ptm_ansatz[node] = expected_value/(2**self.number_of_qubit)
 
         self.ptm_ansatz = PauliTransferMatrix(gate=None, ptm_dict=ptm_ansatz)
         self.fidelity   = average_gate_fidelity(self.ptm_target, self.ptm_ansatz)
