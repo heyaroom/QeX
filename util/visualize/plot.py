@@ -26,8 +26,7 @@ def show_graph(graph,figsize=(15,15)):
 def show_ptm(pauli_transfer_matrix,figsize=(6,5)):
     n       = pauli_transfer_matrix.n
     label   = pauli_transfer_matrix.label
-    ptm     = pauli_transfer_matrix.get_complemented_ptm()
-    mat     = np.array(list(ptm.values()),dtype=np.float64).reshape(4**n,4**n)
+    mat     = pauli_transfer_matrix.get_matrix()
     plt.figure(figsize=figsize)
     plt.imshow(mat)
     plt.colorbar()
