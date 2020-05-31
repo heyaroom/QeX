@@ -28,6 +28,7 @@ class DirectEstimation:
             circuit._reset()
             for i, (pauli, index) in enumerate(zip(spam_condition["prep_pauli"], spam_condition["prep_index"])):
                 circuit.state_preparation(pauli, index, circuit.qubit_name_list[i])
+            ansatz(circuit)
             for i, pauli in enumerate(spam_condition["meas_pauli"]):
                 circuit.measurement(pauli, circuit.qubit_name_list[i])
             spam_condition["sequence"] = copy.deepcopy(circuit.base.sequence)
