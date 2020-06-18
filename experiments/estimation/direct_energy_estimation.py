@@ -44,7 +44,7 @@ class DirectEnergyEstimation:
         self.de.execute(take_data)
 
     def analyze(self):
-        self.de.make_report()
+        self.de.make_data_table()
 
         po_ansatz = {}
         for index in self.prep_index:
@@ -52,7 +52,7 @@ class DirectEnergyEstimation:
             for clique_label, clique_nodes in self.ptm_target.clique_dict.items():
                 for node in clique_nodes:
                     meas_pauli     = node
-                    meas_histogram = self.de.data_table[clique_label][index]
+                    meas_histogram = self.de.data_table[("I"*self.number_of_qubit, clique_label)][index]
                     expected_value = expect_pauli(meas_pauli, meas_histogram)
                     po_ansatz[index][node] = expected_value
 
