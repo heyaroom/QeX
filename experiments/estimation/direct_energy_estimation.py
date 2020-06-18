@@ -58,7 +58,7 @@ class DirectEnergyEstimation:
 
         self.po_ansatz = {}
         for index in self.prep_index:
-            self.po_ansatz[index] = PauliObservable(observable=None, obs_dict=po_ansatz)
+            self.po_ansatz[index] = PauliObservable(observable=None, obs_dict=po_ansatz[index])
 
         self.energy = {}
         for index in self.prep_index:
