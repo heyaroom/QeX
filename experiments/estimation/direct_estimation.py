@@ -35,6 +35,7 @@ class DirectEstimation:
         self.job_table.reset()
         self.data_table = {}
         self.report = None
+<<<<<<< HEAD
 
 class MitigatedDirectEstimation(DirectEstimation):
     def __init__(
@@ -79,3 +80,5 @@ class MitigatedDirectEstimation(DirectEstimation):
         for data_table in self.data_tables.values():
             data_table = {}
         self.report = None
+=======
+>>>>>>> 1484efb2dddf357babbf4197917338f7afedcfcc

@@ -24,5 +24,10 @@ def count_one(key,remove_idx):
     if count%2:
         coeff = -1
     else:
+<<<<<<< HEAD
         coeff = +1
     return coeff
+=======
+        coeff = 1
+    return coeff
+>>>>>>> 1484efb2dddf357babbf4197917338f7afedcfcc

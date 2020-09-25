@@ -40,6 +40,13 @@ class PauliTransferMatrix:
             for meas_label in self.label:
                 out[(prep_label,meas_label)] = self.ptm.get((prep_label,meas_label))
         return out
+    
+    def get_matrix(self):
+        matrix = np.zeros([4**self.n,4**self.n])
+        for i, pi in enumerate(self.label):
+            for j, pj in enumerate(self.label):
+                matrix[i,j] = self.ptm.get((pi,pj))
+        return matrix
 
     def get_matrix(self):
         matrix = np.zeros([4**self.n,4**self.n])
