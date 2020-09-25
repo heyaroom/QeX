@@ -27,10 +27,7 @@ def show_ptm(pauli_transfer_matrix,figsize=(6,5)):
     n       = pauli_transfer_matrix.n
     label   = pauli_transfer_matrix.label
     mat     = pauli_transfer_matrix.get_matrix()
-<<<<<<< HEAD
     # mat     = np.nan_to_num(mat,0)
-=======
->>>>>>> 1484efb2dddf357babbf4197917338f7afedcfcc
     plt.figure(figsize=figsize)
     plt.imshow(mat)
     plt.colorbar()
@@ -39,7 +36,6 @@ def show_ptm(pauli_transfer_matrix,figsize=(6,5)):
     plt.yticks(range(4**n),label)
     plt.tick_params(labelbottom=False,labeltop=True)
     plt.show()
-<<<<<<< HEAD
 
 def show_po(pauli_observable,figsize=(5,2)):
     keys = pauli_observable.obs.keys()
@@ -49,5 +45,3 @@ def show_po(pauli_observable,figsize=(5,2)):
     plt.bar(range(len(keys)),vals)
     plt.xticks(range(len(keys)),keys)
     plt.show()
-=======
->>>>>>> 1484efb2dddf357babbf4197917338f7afedcfcc
