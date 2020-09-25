@@ -96,17 +96,13 @@ class RandomizedBenchmarking:
         self.pauli_ave = np.mean([self.data_table[length] for length in self.length_list],axis=1)
         self.pauli_std = np.std([self.data_table[length] for length in self.length_list],axis=1)
 
-<<<<<<< HEAD
         if not self.inverse:
             a0 = 1 - 2**(-self.number_of_qubit)
             b0 = 2**(-self.number_of_qubit)
         else:
             a0 = -(1 - 2**(-self.number_of_qubit))
             b0 = 1 - 2**(-self.number_of_qubit)
-=======
-        a0 = 1 - 2**(-self.number_of_qubit)
-        b0 = 2**(-self.number_of_qubit)
->>>>>>> 1484efb2dddf357babbf4197917338f7afedcfcc
+        
         _x = np.array(self.length_list)
         _f = (self.pauli_ave - b0)/a0
         _x = _x[np.where(_f>0)]
