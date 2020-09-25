@@ -1,3 +1,3 @@
-from .benchmarking import RandomizedBenchmarking
+from .benchmarking import RandomizedBenchmarking, InterleavedRandomizedBenchmarking, AdjointRandomizedBenchmarking
 from .estimation import DirectEnergyEstimation, DirectFidelityEstimation
 from .optimization import VariationalOptimization

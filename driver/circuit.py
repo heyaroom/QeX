@@ -94,23 +94,66 @@ class MitigatedBase(ExpBase):
     """
     def __init__(self, qubit_name_list, cross_name_list, mitigation_number=0):
         super().__init__(qubit_name_list, cross_name_list)
-        self.mitigation_number = mitigation_number
+        self.mitigation_number = int(mitigation_number)
+
+    # def rx90(self, qubit_name):
+    #     for _ in range(self.mitigation_number):
+    #         super().rx90(qubit_name)
+    #         self.rz(np.pi, qubit_name)
+    #         super().rx90(qubit_name)
+    #         self.rz(np.pi, qubit_name)
+    #     super().rx90(qubit_name)
 
     def rx90(self, qubit_name):
+        """Execute a rx90 gate
+        Args:
+            qubit_name (str): name of qubit
+        """
+        alpha = name_to_alpha(qubit_name)
+
         for _ in range(self.mitigation_number):
-            super().rx90(qubit_name)
-            self.rz(np.pi, qubit_name)
-            super().rx90(qubit_name)
-            self.rz(np.pi, qubit_name)
-        super().rx90(qubit_name)
+            self.sequence[qubit_name] += "WAIT{0} ".format(alpha)
+
+        self.sequence[qubit_name] += "P0 HPI{0} ".format(alpha)
+        
+        for _ in range(self.mitigation_number):
+            self.sequence[qubit_name] += "WAIT{0} ".format(alpha)
     
+    # def rzx45(self, cross_name):
+    #     for _ in range(self.mitigation_number):
+    #         super().rzx45(cross_name)
+    #         self.rz(np.pi, cross_name[1])
+    #         super().rzx45(cross_name)
+    #         self.rz(np.pi, cross_name[1])
+    #     super().rzx45(cross_name)
+
     def rzx45(self, cross_name):
+        """Execute a rzx45 gate
+        Args:
+            cross_name (str, str, str): (name of control qubit, name of target qubit, name of port)
+        """
+        calpha = name_to_alpha(cross_name[0])
+        talpha = name_to_alpha(cross_name[1])
+
+        self.sequence[cross_name[0]] += "T{0} ".format(self.trigger_point)
+        self.sequence[cross_name[1]] += "T{0} ".format(self.trigger_point)
+        self.sequence[cross_name]    += "T{0} ".format(self.trigger_point)
+
         for _ in range(self.mitigation_number):
-            super().rzx45(cross_name)
-            self.rz(np.pi, cross_name[1])
-            super().rzx45(cross_name)
-            self.rz(np.pi, cross_name[1])
-        super().rzx45(cross_name)
+            self.sequence[cross_name[0]] += "WAIT{0}{1} ".format(calpha, talpha)
+            self.sequence[cross_name[1]] += "WAIT{0}{1} ".format(calpha, talpha)
+            self.sequence[cross_name]    += "WAIT{0}{1} ".format(calpha, talpha)
+
+        self.sequence[cross_name[0]] += "WCR{0}{1} ".format(calpha, talpha) # qubit (control)
+        self.sequence[cross_name[1]] += "DCT{0}{1} ".format(calpha, talpha) # qubit (target)
+        self.sequence[cross_name]    += "DCR{0}{1} ".format(calpha, talpha) # port ("cr1", "cr2")
+
+        for _ in range(self.mitigation_number):
+            self.sequence[cross_name[0]] += "WAIT{0}{1} ".format(calpha, talpha)
+            self.sequence[cross_name[1]] += "WAIT{0}{1} ".format(calpha, talpha)
+            self.sequence[cross_name]    += "WAIT{0}{1} ".format(calpha, talpha)
+
+        self.trigger_point           += 1
 
 class Circuit:
     """Circuit Processor for Experiments and Numerics.
@@ -160,15 +203,6 @@ class Circuit:
         self.rx90(qubit_name)
         self.rz(-0.5*np.pi, qubit_name)
 
-    def irzx45(self, cross_name):
-        """Execute a inversed rzx45 gate
-        Args:
-            cross_name (str, str, str): (name of control qubit, name of target qubit, name of port)
-        """
-        self.rz(np.pi, qubit_name=cross_name[1])
-        self.rzx45(cross_name)
-        self.rz(np.pi, qubit_name=cross_name[1])
-
     def rzx90(self, cross_name):
         """Execute a rzx90 gate with TPCX gate seauence
         Args:
@@ -177,7 +211,9 @@ class Circuit:
         self.rzx45(cross_name)
         self.rx90(cross_name[0])
         self.rx90(cross_name[0])
-        self.irzx45(cross_name)
+        self.rz(np.pi, qubit_name=cross_name[1])
+        self.rzx45(cross_name)
+        self.rz(np.pi, qubit_name=cross_name[1])
         self.rx90(cross_name[0])
         self.rx90(cross_name[0])
 

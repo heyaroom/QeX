@@ -26,7 +26,7 @@ class GroupBase():
                     cnt+=1
         assert(cnt==0)
 
-    def sample(self, count : int) -> list:
+    def sample(self, count, seed=0):
         """randomly choose <code>count</code> of elements
         
         Arguments:
@@ -35,5 +35,5 @@ class GroupBase():
         Returns:
             list -- list of chosen elements
         """
-
+        np.random.seed(seed)
         return self.element[np.random.choice(self.element.shape[0],size=count,replace=True)]

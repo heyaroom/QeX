@@ -4,32 +4,20 @@ from ...objects import Stepper, Report
 from ...optimizer import optimizer
 
 class VariationalOptimization:
-    def __init__(
-        self,
-        direct_x_estimation,
-        n_param,
-        iteration,
-        p_seed                  = 0,
-        initp                   = None,
-        optimizer_strategy      = "sequential_minimal_optimization",
-        generate_take_data      = None,
-        ):
+    def __init__(self, direct_x_estimation):
+        self.dxe = direct_x_estimation
 
-        self.dxe                = direct_x_estimation
-        self.generate_take_data = generate_take_data
-        self.report             = Report(name="variational_optimization")
-
+    def prepare(self, ansatz, take_data, n_param):
         def sub_execute(phi):
-            take_data = self.generate_take_data(phi)
-
-            self.dxe.reset()
+            tmp_ansatz = lambda cir : ansatz(cir, phi=phi)
+            self.dxe.prepare(tmp_ansatz)
             self.dxe.execute(take_data)
-            self.dxe.make_report()
+            self.dxe.analyze()
 
-            sub_report                  = {}
-            sub_report["score"]         = self.dxe.report.dictionary["score"]
-            sub_report["number_of_job"] = len(self.dxe.de.job_table.keys())
-            sub_report["register"]      = {}
+            sub_report = {}
+            sub_report["score"] = self.dxe.report.dictionary["score"]
+            sub_report["step"] = len(self.dxe.de.job_table.table)
+            sub_report["register"] = {}
             for key, value in self.dxe.report.dictionary.items():
                 if key != "score":
                     sub_report["register"][key] = value
@@ -40,26 +28,23 @@ class VariationalOptimization:
             n_param = n_param
         )
 
-        self.optimize       = optimizer[optimizer_strategy]
-        self.p_seed         = p_seed
-        self.iteration      = iteration
-        self.initp          = initp
-
-    def execute(self):
+    def execute(self, iteration, p_seed=0, initp=None, optimizer_strategy="sequential_minimal_optimization"):
+        self.optimize = optimizer[optimizer_strategy]
         self.optimize(
-            model       = self.stepper,
-            p_seed      = self.p_seed,
-            iteration   = self.iteration,
-            initp       = self.initp
+            model = self.stepper,
+            p_seed = p_seed,
+            iteration = iteration,
+            initp = initp
             )
 
-    def make_report(self):
+    def analyze(self):
+        self.report = Report(name="variational_optimization")
         self.report.add_information("optimization score trace", self.stepper.score)
         self.report.add_information("variational parameter trace", self.stepper.phi)
         self.report.add_information("iteration number", self.stepper.iteration)
         self.report.add_information("register", self.stepper.register)
 
-    def show_report(self):
+    def visualyze(self):
         plt.figure(figsize=(5,5))
         plt.plot(self.report.dictionary["iteration number"], self.report.dictionary["optimization score trace"])
         plt.ylabel("Score")

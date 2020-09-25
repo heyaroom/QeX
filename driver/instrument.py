@@ -1,3 +1,4 @@
+from retrying import retry
 from .util import name_to_alpha
 from measurement_tool.units import MHz, GHz, ns, us, dB
 
@@ -36,6 +37,7 @@ def set_qubit(instrument, qubit_notes, qubit_information):
             alpha = name_to_alpha(qubit_name)
             instrument.seq.set_user_command("HPI{0}".format(alpha), "A{0} DT{1} B{2} D{2} B{2}".format(note.pi_pulse_power, note.half_pi_pulse_drag_coeff, note.half_pi_pulse_length_precise["ns"]))
             instrument.seq.set_user_command("MEAS{0}".format(alpha), "A{0} T B10 M F3000".format(note.cavity_readout_window_power))
+            instrument.seq.set_user_command("WAIT{0}".format(alpha), "B{0} ".format(note.half_pi_pulse_length_precise["ns"]))
 
 def set_cross(instrument, cross_notes, cross_information):
     """Setup of the instruments used in the experiment
@@ -55,36 +57,59 @@ def set_cross(instrument, cross_notes, cross_information):
                 instrument.mwb.config[cross_name[1]].c2atten         = note.atten
             calpha = name_to_alpha(cross_name[0])
             talpha = name_to_alpha(cross_name[1])
-            instrument.seq.set_user_command("DCR{0}{1}".format(calpha, talpha), "B{0} A{1} P{2} F{3} B{0}".format(note.crw["ns"], note.cra, note.crp, note.crt["ns"]))
-            instrument.seq.set_user_command("DCT{0}{1}".format(calpha, talpha), "B{0} A{1} P{2} F{3} B{0}".format(note.crw["ns"], note.cta, note.ctp, note.crt["ns"]))
-            instrument.seq.set_user_command("WCR{0}{1}".format(calpha, talpha), "B{0}       B{1} B{0} Z{2}".format(note.crw["ns"], note.crt["ns"], note.crz))
-            instrument.seq.set_user_command("DICR{0}{1}".format(calpha, talpha), "B{0} A{1} P{2} F{3} B{0}".format(note.crw["ns"], note.cra, note.crp+180, note.crt["ns"]))
-            instrument.seq.set_user_command("DICT{0}{1}".format(calpha, talpha), "B{0} A{1} P{2} F{3} B{0}".format(note.crw["ns"], note.cta, note.ctp+180, note.crt["ns"]))
+            instrument.seq.set_user_command("DCR{0}{1}".format(calpha, talpha), "B{0} FT{1} A{2} P{3} F{4} B{0}".format(note.crw["ns"], note.crr["ns"], note.cra, note.crp, note.crt["ns"]))
+            instrument.seq.set_user_command("DCT{0}{1}".format(calpha, talpha), "B{0} FT{1} A{2} P{3} F{4} B{0}".format(note.crw["ns"], note.crr["ns"], note.cta, note.ctp, note.crt["ns"]))
+            instrument.seq.set_user_command("WCR{0}{1}".format(calpha, talpha), "B{0}                 B{1} B{0}".format(note.crw["ns"], note.crt["ns"]))
+            instrument.seq.set_user_command("WAIT{0}{1}".format(calpha, talpha), "B{0} ".format(note.crw["ns"] + 0.5*note.crt["ns"]))
 
-def do_experiment(instrument, target_qubit_list, pulse_dict, shot_number, dataset_name="test"):
-    """Execute the experiment
-    Args:
-        instrument (TimeDomainInstrumentManager): Instruments used in the experiment
-        target_qubit_list (list): List of the qubit name used in the experiment
-        pulse_dict (dict): Dictionary contained the list of the pulse sequences used in the experiment
-        shot_number (int): Number of the shots in the experiment
-        dataset_name (str): Name of the experiment saved in the DataVault
-    Returns:
-        dataset (DataSet): Experimental results
-    """
-    sweep_id   = 0
+@retry(stop_max_attempt_number=5, wait_fixed=60)
+def take_data(job_table):
+    instrument = tdm_inst
+    target_list = qubit_information
+    exp       = CreateProjectorTarget(target_list)
+    projector = exp.execute(tdm_inst, qubit_notes, save=False)
+    set_qubit(instrument, qubit_notes, qubit_information)
+    set_cross(instrument, cross_notes, cross_information)
+    port_list = job_table.table[0].sequence.keys()
+    
+    sequences = {}
+    for port_name in port_list:
+        if type(port_name) is str:
+            sequences[(port_name, "readout")] = []
+            sequences[(port_name,   "qubit")] = []
+            sequences[(port_name,     "cr1")] = []
+            sequences[(port_name,     "cr2")] = []
+    for job in job_table.table:
+        for port_name in job.sequence.keys():
+            if type(port_name) is str:
+                alpha = name_to_alpha(port_name)
+                sequences[(port_name, "readout")].append("MEAS{0}".format(alpha))
+                sequences[(port_name,   "qubit")].append(job.sequence[port_name] + " T")
+                sequences[(port_name,     "cr1")].append("T")
+                sequences[(port_name,     "cr2")].append("T")
+            if type(port_name) is tuple:
+                if port_name[1] in target_list:
+                    del sequences[(port_name[1], port_name[2])][-1]
+                    sequences[(port_name[1], port_name[2])].append(job.sequence[port_name] + " T")
+                    
+    sweep_index = 0
     sweep_axis = []
-	for idx, qubit_name in enumerate(target_qubit_list):
-		instrument.seq.config_variable_command("C{0}C".format(sweeo_id+0), pulse_dict[(qubit_name, "readout")], "readout_sequence")
-		instrument.seq.config_variable_command("C{0}C".format(sweep_id+1), pulse_dict[(qubit_name,   "qubit")],   "qubit_sequence")
-		instrument.seq.config_variable_command("C{0}C".format(sweep_id+2), pulse_dict[(qubit_name,     "cr1")],     "cr1_sequence")
-		instrument.seq.config_variable_command("C{0}C".format(sweep_id+3), pulse_dict[(qubit_name,     "cr2")],     "cr2_sequence")
-        instrument.seq[qubit_name].readout.seq = "C{0}C".format(id+0)
-        instrument.seq[qubit_name].qubit.seq   = "C{0}C".format(id+1)
-        instrument.seq[qubit_name].cr1.seq     = "C{0}C".format(id+2)
-        instrument.seq[qubit_name].cr2.seq     = "C{0}C".format(id+3)
-		sweep_id += 4
-		sweep_axis.append([0]*4)
-	instrument.qla.status.shots = shot_number
-    dataset = instrument.take_data(dataset_name,save=True,sweep_axis=sweep_axis)
-    return dataset
+    for port_name in port_list:
+        if type(port_name) is str:
+            instrument.seq.config_variable_command("C{0}C".format(sweep_index+0), sequences[(port_name, "readout")], "readout_sequence")
+            instrument.seq.config_variable_command("C{0}C".format(sweep_index+1), sequences[(port_name,   "qubit")],   "qubit_sequence")
+            instrument.seq.config_variable_command("C{0}C".format(sweep_index+2), sequences[(port_name,     "cr1")],     "cr1_sequence")
+            instrument.seq.config_variable_command("C{0}C".format(sweep_index+3), sequences[(port_name,     "cr2")],     "cr2_sequence")
+            instrument.seq[port_name].readout.seq = "C{0}C".format(sweep_index+0)
+            instrument.seq[port_name].qubit.seq   = "C{0}C".format(sweep_index+1)
+            instrument.seq[port_name].cr1.seq     = "C{0}C".format(sweep_index+2)
+            instrument.seq[port_name].cr2.seq     = "C{0}C".format(sweep_index+3)
+            sweep_index += 4
+            sweep_axis += [0]*4
+            
+    instrument.qla.status.shots = 1024
+    dataset = instrument.take_data(dataset_name="test",save=False,sweep_axis=sweep_axis)
+    data_dict = dataset.get_iq_data_dict()
+    hist_dict = projector.get_histogram_dict(data_dict)
+    for job, histogram in zip(job_table.table, hist_dict):
+        job.result = normalize_histogram(histogram)

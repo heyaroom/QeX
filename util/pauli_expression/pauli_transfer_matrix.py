@@ -41,6 +41,19 @@ class PauliTransferMatrix:
                 out[(prep_label,meas_label)] = self.ptm.get((prep_label,meas_label))
         return out
 
+    def get_matrix(self):
+        matrix = np.zeros([4**self.n,4**self.n])
+        for i, pi in enumerate(self.label):
+            for j, pj in enumerate(self.label):
+                matrix[i,j] = self.ptm.get((pi,pj))
+        return matrix
+
+    def get_unitarity(self):
+        matrix = self.get_matrix()
+        matrix = np.nan_to_num(matrix, 0)
+        unitarity = (np.trace(matrix.T@matrix)-1)/(4**self.n-1)
+        return unitarity
+
     def get_graph(self):
         nodes = list(self.ptm.keys())
         edges = []

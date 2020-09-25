@@ -12,10 +12,12 @@ def optimize(model, p_seed, iteration, initp=None):
     else:
         param = initp
 
+    maxfev = 1 + 2*n_param*iteration
+
     res  = minimize(
         model.step,
         copy.copy(param),
-        options={'maxfev': iteration},
+        options={'maxfev': maxfev,"reset_interval":-1},
         method=nakanishi_fujii_todo,
         callback=model.callback
     )

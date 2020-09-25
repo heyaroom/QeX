@@ -19,7 +19,7 @@ class UnitaryGroup(GroupBase):
         """
         pass
 
-    def sample(self, count : int) -> list:
+    def sample(self, count, seed=0):
         """randomly choose <code>count</code> of elements
         
         Arguments:
@@ -28,11 +28,14 @@ class UnitaryGroup(GroupBase):
         Returns:
             list -- list of chosen elements
         """
+        np.random.seed(seed)
         dim = 2**self.num_qubit
+
         element = []
         for _ in range(count):
-            element.append(unitary_group.rvs(dim))
-        return element
+            gate = unitary_group.rvs(dim)
+            element.append(gate)
+        return np.array(element)
     
 def test_unitary():
     """test function for UnitaryGroup class    

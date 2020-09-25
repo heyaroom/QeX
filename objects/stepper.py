@@ -13,13 +13,16 @@ class Stepper:
     def step(self,phi,evaluate=False,stop_signal=False):
         report          = self.execute(phi)
         score           = report["score"]
-        self.step_count += report["step"]
 
         if evaluate:
             self.score.append(score)
             self.phi.append(phi)
             self.iteration.append(self.step_count)
             self.register.append(report["register"])
+            self.report(report)
+        else:
+            self.step_count += report["step"]
+
         return score
 
     def callback(self,phi):
