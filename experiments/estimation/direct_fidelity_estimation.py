@@ -28,8 +28,9 @@ class DirectFidelityEstimation:
         self.ptm_target.get_graph()
         self.ptm_target.get_clique_dict(strategy=clique_cover_strategy)
 
-    def set_circuit(self, circuits):
+    def set_circuit(self, circuits, qubit_index):
         self.circuit = circuits["1"]
+        self.qubit_index = qubit_index
 
     def prepare(self, ansatz):
         spam_condition_list = []
@@ -42,7 +43,8 @@ class DirectFidelityEstimation:
                         "prep_index" : index,
                     }
                 )
-        self.de = DirectEstimation(ansatz, self.circuit, spam_condition_list)
+        self.de = DirectEstimation(ansatz, self.circuit, self.qubit_index, spam_condition_list)
+        self.job_table = self.de.job_table
 
     def execute(self, take_data):
         self.de.execute(take_data)

@@ -6,20 +6,27 @@ class DirectEstimation:
         self,
         ansatz,
         circuit,
+        qubit_index,
         spam_condition_list,
         ):
 
         self.name = "DirectEstimation"
+        
         self.job_table  = JobTable()
-        for spam_condition in spam_condition_list:
-            circuit._reset()
-            for i, (pauli, index) in enumerate(zip(spam_condition["prep_pauli"], spam_condition["prep_index"])):
-                circuit.state_preparation(pauli, index, circuit.qubit_name_list[i])
-            ansatz(circuit)
-            for i, pauli in enumerate(spam_condition["meas_pauli"]):
-                circuit.measurement(pauli, circuit.qubit_name_list[i])
-            spam_condition["sequence"] = copy.deepcopy(circuit.base.sequence)
-            self.job_table.submit(Job(spam_condition))
+        for condition in spam_condition_list:
+            
+            cir = copy.deepcopy(circuit)
+            for i, (pauli, index) in enumerate(zip(condition["prep_pauli"], condition["prep_index"])):
+                cir.prep_init(pauli, index, qubit_index[i])
+            cir.call(ansatz)
+            for i, pauli in enumerate(condition["meas_pauli"]):
+                cir.meas_axis(pauli, qubit_index[i])
+            cir.qtrigger(qubit_index)
+            for idx in qubit_index:
+                cir.measurement(idx)
+                
+            condition["sequence"] = cir
+            self.job_table.submit(Job(condition))
 
     def execute(self, take_data):
         take_data(self.job_table)

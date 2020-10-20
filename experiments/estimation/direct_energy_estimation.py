@@ -25,9 +25,10 @@ class DirectEnergyEstimation:
         self.po_target.get_clique_dict(strategy=clique_cover_strategy)
         self.clique_cover_strategy = clique_cover_strategy
 
-    def set_circuit(self, circuits):
+    def set_circuit(self, circuits, qubit_index):
         self.circuit1 = circuits["1"]
         self.circuit2 = circuits["2"]
+        self.qubit_index = qubit_index
 
     def prepare(self, ansatz):
             spam_condition_list = []
@@ -40,8 +41,8 @@ class DirectEnergyEstimation:
                             "prep_index" : index,
                         }
                     )
-            self.de1     = DirectEstimation(ansatz, self.circuit1, spam_condition_list)
-            self.de2     = DirectEstimation(ansatz, self.circuit2, spam_condition_list)
+            self.de1     = DirectEstimation(ansatz, self.circuit1, self.qubit_index, spam_condition_list)
+            self.de2     = DirectEstimation(ansatz, self.circuit2, self.qubit_index, spam_condition_list)
             self.de      = self.de1
 
     def execute(self, take_data):

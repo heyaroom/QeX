@@ -16,6 +16,7 @@ class RandomizedBenchmarking:
     def __init__(
         self,
         circuit,
+        qubit_index,
         group,
         sequence_list,
         seed = 0,
@@ -25,30 +26,23 @@ class RandomizedBenchmarking:
 
         self.name               = "RandomizedBenchmarking"
         self.number_of_qubit    = group.num_qubit
+        self.qubit_index        = qubit_index
         self.seed               = seed
         self.interleaved        = interleaved
         self.inverse            = inverse
         self.sequence_list      = sequence_list
-        self.length_list        = [i[0] for i in sequence_list]
-        self.qubit_name_list    = circuit.qubit_name_list
-        self.cross_name_list    = circuit.cross_name_list
-
+        self.length_list        = np.array(sequence_list).T[0].tolist()
+        
         self.job_table = JobTable()
         for (length, random, shot) in self.sequence_list:
+            
+            ## generate gate_array ##
+            sequence_array = []
             if length == 0:
                 for idx in range(random):
-                    circuit._reset()
-                    if inverse:
-                        for qubit_name in circuit.qubit_name_list:
-                            circuit.rx90(qubit_name=qubit_name)
-                            circuit.rx90(qubit_name=qubit_name)
-                    condition = {
-                        "length"      : length,
-                        "gate_array"  : [],
-                        "shot"        : shot,
-                        "sequence"    : copy.deepcopy(circuit.base.sequence)
-                    }
-                    self.job_table.submit(Job(condition))
+                    gate_array = []
+                    sequence_array.append(gate_array)
+                    
             else:
                 rand_gate_array = group.sample(random*(length-1), seed=self.seed)
                 rand_gate_array = rand_gate_array.reshape(random, length-1, 2**self.number_of_qubit, 2**self.number_of_qubit)
@@ -61,27 +55,37 @@ class RandomizedBenchmarking:
                         if self.interleaved is not None:
                             gate = self.interleaved["gate"]@gate
                     gate_array.append(gate.T.conj())
+                    sequence_array.append(gate_array)
+                    
+            ## apply experiment ##
+            for gate_array in sequence_array:
+                cir = copy.deepcopy(circuit)
+                if inverse:
+                    for idx in self.qubit_index:
+                        circuit.X(idx)
+                for pos, gate in enumerate(gate_array):
+                    if int(np.log2(gate.shape[0])) == 1:
+                        cir.su2(gate, target=self.qubit_index[0])
+                    if int(np.log2(gate.shape[0])) == 2:
+                        cir.su4(gate, control=self.qubit_index[0], target=self.qubit_index[1])
+                    if interleaved is not None:
+                        if pos != len(gate_array)-1:
+                            cir.qtrigger(self.qubit_index)
+                            cir.call(self.interleaved["ansatz"])
+                            cir.qtrigger(self.qubit_index)
+                cir.qtrigger(self.qubit_index)
+                for idx in self.qubit_index:
+                    cir.measurement(idx)
+                cir.compile()
 
-                    circuit._reset()
-                    if inverse:
-                        for qubit_name in circuit.qubit_name_list:
-                            circuit.rx90(qubit_name=qubit_name)
-                            circuit.rx90(qubit_name=qubit_name)
-                    for idx, gate in enumerate(gate_array):
-                        if int(np.log2(gate.shape[0])) == 1:
-                            circuit.su2(gate, qubit_name=circuit.qubit_name_list[0])
-                        if int(np.log2(gate.shape[0])) == 2:
-                            circuit.su4(gate, cross_name=circuit.cross_name_list[0])
-                        if self.interleaved is not None and idx != len(gate_array)-1:
-                            self.interleaved["ansatz"](circuit)
-
-                    condition = {
-                        "length"      : length,
-                        "gate_array"  : gate_array,
-                        "shot"        : shot,
-                        "sequence"    : copy.deepcopy(circuit.base.sequence)
-                    }
-                    self.job_table.submit(Job(condition))
+                ## job submition ##
+                condition = {
+                    "length"      : length,
+                    "gate_array"  : gate_array,
+                    "shot"        : shot,
+                    "sequence"    : cir,
+                }
+                self.job_table.submit(Job(condition))
 
     def execute(self, take_data):
         take_data(self.job_table)
@@ -149,14 +153,15 @@ class InterleavedRandomizedBenchmarking:
     def __init__(
         self,
         circuit,
+        qubit_index,
         group,
         sequence_list,
         seed = 0,
         interleaved = None,
         ):
 
-        self.standard_rb = RandomizedBenchmarking(circuit, group, sequence_list, seed, interleaved=None)
-        self.interleaved_rb = RandomizedBenchmarking(circuit, group, sequence_list, seed, interleaved)
+        self.standard_rb = RandomizedBenchmarking(circuit, qubit_index, group, sequence_list, seed, interleaved=None)
+        self.interleaved_rb = RandomizedBenchmarking(circuit, qubit_index, group, sequence_list, seed, interleaved)
 
     def execute(self, take_data):
         self.standard_rb.execute(take_data)
@@ -193,13 +198,14 @@ class AdjointRandomizedBenchmarking:
     def __init__(
         self,
         circuit,
+        qubit_index,
         group,
         sequence_list,
         seed = 0,
         ):
 
-        self.standard_rb = RandomizedBenchmarking(circuit, group, sequence_list, seed, inverse=False)
-        self.inversed_rb = RandomizedBenchmarking(circuit, group, sequence_list, seed, inverse=True)
+        self.standard_rb = RandomizedBenchmarking(circuit, qubit_index, group, sequence_list, seed, inverse=False)
+        self.inversed_rb = RandomizedBenchmarking(circuit, qubit_index, group, sequence_list, seed, inverse=True)
         self.number_of_qubit = self.standard_rb.number_of_qubit
         self.length_list = self.standard_rb.length_list
 
