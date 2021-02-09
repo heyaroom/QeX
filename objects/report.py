@@ -2,7 +2,7 @@ import datetime
 import pickle
 import os
 
-REPORT_DIRECTORY = "C:\\Scalabrad\\heya_exp_codes\\reports\\"
+REPORT_DIRECTORY = 'C:\\Users\\user\\Documents\\scalabrad\\heya\\reports\\'
 
 class Report:
     def __init__(self, name="noname"):

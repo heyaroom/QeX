@@ -1,1 +1,1 @@
-from .randomized_benchmarking import RandomizedBenchmarking, InterleavedRandomizedBenchmarking, AdjointRandomizedBenchmarking
+from .randomized_benchmarking import RandomizedBenchmarking, InterleavedRandomizedBenchmarking, AdjointRandomizedBenchmarking, UnitarityRandomizedBenchmarking, FastUnitarityRandomizedBenchmarking

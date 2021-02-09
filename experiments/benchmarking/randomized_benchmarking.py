@@ -1,4 +1,5 @@
 import copy
+import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
@@ -21,7 +22,7 @@ class RandomizedBenchmarking:
         sequence_list,
         seed = 0,
         interleaved = None,
-        inverse = False
+        initial_inverse = False,
         ):
 
         self.name               = "RandomizedBenchmarking"
@@ -29,11 +30,12 @@ class RandomizedBenchmarking:
         self.qubit_index        = qubit_index
         self.seed               = seed
         self.interleaved        = interleaved
-        self.inverse            = inverse
+        self.initial_inverse    = initial_inverse
         self.sequence_list      = sequence_list
         self.length_list        = np.array(sequence_list).T[0].tolist()
+        self.report             = Report(name="randomized_benchmarking")
         
-        self.job_table = JobTable()
+        self.job_table = JobTable(name=self.name)
         for (length, random, shot) in self.sequence_list:
             
             ## generate gate_array ##
@@ -60,9 +62,10 @@ class RandomizedBenchmarking:
             ## apply experiment ##
             for gate_array in sequence_array:
                 cir = copy.deepcopy(circuit)
-                if inverse:
+                if initial_inverse:
                     for idx in self.qubit_index:
-                        circuit.X(idx)
+                        cir.X(idx)
+                    cir.qtrigger(self.qubit_index)
                 for pos, gate in enumerate(gate_array):
                     if int(np.log2(gate.shape[0])) == 1:
                         cir.su2(gate, target=self.qubit_index[0])
@@ -74,33 +77,44 @@ class RandomizedBenchmarking:
                             cir.call(self.interleaved["ansatz"])
                             cir.qtrigger(self.qubit_index)
                 cir.qtrigger(self.qubit_index)
-                for idx in self.qubit_index:
-                    cir.measurement(idx)
-                cir.compile()
+                cir.measurement_all()
 
                 ## job submition ##
                 condition = {
                     "length"      : length,
                     "gate_array"  : gate_array,
                     "shot"        : shot,
-                    "sequence"    : cir,
+                    "sequence"    : cir.get_waveform_information(),
+#                     "sequence"    : cir,
                 }
                 self.job_table.submit(Job(condition))
 
     def execute(self, take_data):
         take_data(self.job_table)
 
+    def tmp_analyze(self):
+        self.hist_table = {}
+        for length in self.length_list:
+            self.hist_table[length] = []
+        for job in self.job_table.table:
+            self.hist_table[job.length].append(job.result)
+            
+        self.report.add_information("hist table", self.hist_table)
+        self.report.add_information("sequence", self.sequence_list)
+        self.report.add_information("seed", self.seed)
+        self.report.add_information("qubit index", self.qubit_index)
+        
     def analyze(self):
         self.data_table = {}
         for length in self.length_list:
             self.data_table[length] = []
         for job in self.job_table.table:
-            self.data_table[job.length].append(job.result["0"*self.number_of_qubit])
+            self.data_table[job.length].append(job.result["0"*len(list(job.result.keys())[0])])
 
         self.pauli_ave = np.mean([self.data_table[length] for length in self.length_list],axis=1)
         self.pauli_std = np.std([self.data_table[length] for length in self.length_list],axis=1)
 
-        if not self.inverse:
+        if not self.initial_inverse:
             a0 = 1 - 2**(-self.number_of_qubit)
             b0 = 2**(-self.number_of_qubit)
         else:
@@ -121,7 +135,6 @@ class RandomizedBenchmarking:
         self.p = popt[2]
         self.fidelity = (1 + (2**self.number_of_qubit - 1)*self.p)/(2**self.number_of_qubit)
 
-        self.report = Report(name="randomized_benchmarking")
         self.report.add_information("average gate fidelty", self.fidelity)
         self.report.add_information("fit params : a, b, p", [self.a, self.b, self.p])
         self.report.add_information("population : average", self.pauli_ave)
@@ -129,8 +142,7 @@ class RandomizedBenchmarking:
         self.report.add_information("data table", self.data_table)
         self.report.add_information("sequence", self.sequence_list)
         self.report.add_information("seed", self.seed)
-        self.report.add_information("qubit name list", self.qubit_name_list)
-        self.report.add_information("cross name list", self.cross_name_list)
+        self.report.add_information("qubit index", self.qubit_index)
 
     def visualize(self):
         print("fidelity is {0}".format(self.fidelity))
@@ -139,6 +151,7 @@ class RandomizedBenchmarking:
         yfit = exp_decay(xfit,self.a,self.b,self.p)
         plt.plot(xfit,yfit,'r-')
         plt.errorbar(x=self.length_list,y=self.pauli_ave,yerr=self.pauli_std,fmt='k.')
+        plt.axhline(2**(-self.number_of_qubit), color="black", linestyle="--")
         plt.xlabel('Sequence length')
         plt.ylabel("Population")
         plt.ylim(-0.1,1.1)
@@ -148,7 +161,7 @@ class RandomizedBenchmarking:
         self.job_table.reset()
         self.data_table = {}
         self.report = None
-
+        
 class InterleavedRandomizedBenchmarking:
     def __init__(
         self,
@@ -202,10 +215,11 @@ class AdjointRandomizedBenchmarking:
         group,
         sequence_list,
         seed = 0,
+        interleaved = None,
         ):
 
-        self.standard_rb = RandomizedBenchmarking(circuit, qubit_index, group, sequence_list, seed, inverse=False)
-        self.inversed_rb = RandomizedBenchmarking(circuit, qubit_index, group, sequence_list, seed, inverse=True)
+        self.standard_rb = RandomizedBenchmarking(circuit, qubit_index, group, sequence_list, seed, initial_inverse=False, interleaved=interleaved)
+        self.inversed_rb = RandomizedBenchmarking(circuit, qubit_index, group, sequence_list, seed, initial_inverse=True, interleaved=interleaved)
         self.number_of_qubit = self.standard_rb.number_of_qubit
         self.length_list = self.standard_rb.length_list
 
@@ -245,7 +259,7 @@ class AdjointRandomizedBenchmarking:
         srb_yfit = exp_decay(xfit,self.standard_rb.a,self.standard_rb.b,self.standard_rb.p)
         irb_yfit = exp_decay(xfit,self.inversed_rb.a,self.inversed_rb.b,self.inversed_rb.p)
         plt.plot(xfit,srb_yfit,'r-', label="Standard")
-        plt.plot(xfit,irb_yfit,'b-', label="Interleaved")
+        plt.plot(xfit,irb_yfit,'b-', label="Inversed")
         plt.errorbar(x=self.length_list, y=self.standard_rb.pauli_ave, yerr=self.standard_rb.pauli_std, fmt='k.')
         plt.errorbar(x=self.length_list, y=self.inversed_rb.pauli_ave, yerr=self.inversed_rb.pauli_std, fmt='k.')
         plt.xlabel('Sequence length')
@@ -261,4 +275,230 @@ class AdjointRandomizedBenchmarking:
         plt.ylabel("Variance")
         plt.ylim(-0.1,1.1)
         plt.tight_layout()
+        plt.show()
+        
+class UnitarityRandomizedBenchmarking:
+    def __init__(
+        self,
+        circuit,
+        qubit_index,
+        group,
+        sequence_list,
+        seed = 0,
+        interleaved = None,
+        ):
+
+        self.name               = "UnitarityRandomizedBenchmarking"
+        self.number_of_qubit    = group.num_qubit
+        self.qubit_index        = qubit_index
+        self.seed               = seed
+        self.interleaved        = interleaved
+        self.sequence_list      = sequence_list
+        self.length_list        = np.array(sequence_list).T[0].tolist()
+        
+        self.job_table = JobTable(name=self.name)
+        for (length, random, shot) in self.sequence_list:
+            
+            ## generate gate_array ##
+            sequence_array = []
+            if length == 0:
+                for idx in range(random):
+                    gate_array = []
+                    sequence_array.append(gate_array)
+                    
+            else:
+                rand_gate_array = group.sample(random*(length-1), seed=self.seed)
+                rand_gate_array = rand_gate_array.reshape(random, length-1, 2**self.number_of_qubit, 2**self.number_of_qubit)
+                for rand_gates in rand_gate_array:
+                    gate_array = []
+                    gate = np.identity(2**self.number_of_qubit)
+                    for rand in rand_gates:
+                        gate_array.append(rand)
+                        gate = rand@gate
+                        if self.interleaved is not None:
+                            gate = self.interleaved["gate"]@gate
+                    sequence_array.append(gate_array)
+                    
+            ## apply experiment ##
+            for meas_pauli_list in itertools.product(["X","Y","Z"], repeat=self.number_of_qubit):
+                for gate_array in sequence_array:
+                    cir = copy.deepcopy(circuit)
+                    for pos, gate in enumerate(gate_array):
+                        if int(np.log2(gate.shape[0])) == 1:
+                            cir.su2(gate, target=self.qubit_index[0])
+                        if int(np.log2(gate.shape[0])) == 2:
+                            cir.su4(gate, control=self.qubit_index[0], target=self.qubit_index[1])
+                        if interleaved is not None:
+                            if pos != len(gate_array) - 1:
+                                cir.qtrigger(self.qubit_index)
+                                cir.call(self.interleaved["ansatz"])
+                                cir.qtrigger(self.qubit_index)
+                    cir.qtrigger(self.qubit_index)
+                    for target, meas_pauli in zip(self.qubit_index, meas_pauli_list):
+                        cir.meas_axis(meas_pauli, target)
+                    cir.qtrigger(self.qubit_index)
+                    for idx in self.qubit_index:
+                        for mux in cir.port_table.nodes[idx].mux:
+                            cir.measurement(mux)
+
+                    ## job submition ##
+                    condition = {
+                        "length"         : length,
+                        "gate_array"     : gate_array,
+                        "observed_pauli" : meas_pauli_list,
+                        "shot"           : shot,
+                        "sequence"       : cir.get_waveform_information(),
+                    }
+                    self.job_table.submit(Job(condition))
+
+    def execute(self, take_data):
+        take_data(self.job_table)
+
+    def analyze(self):
+        
+        pauli = np.array([2*job.result["0"*self.number_of_qubit] - 1 for job in self.job_table.table])
+        pauli = pauli.reshape(len(self.length_list),3,100)
+        self.pauli = pauli
+
+        self.a = np.sum(np.mean(pauli, axis=2), axis=1)
+#         self.b = np.sum(np.mean(pauli**2, axis=2) - np.mean(pauli, axis=2)**2, axis=1)
+        self.b = np.sum(np.var(pauli, axis=2), axis=1)
+
+        popt, pcov = curve_fit(exp_decay,self.length_list,self.a,p0=[self.a[0],0,0.99])
+        self.a_fit_param = popt
+        self.leakage = popt[2]
+
+        popt, pcov = curve_fit(exp_decay,self.length_list,self.b,p0=[self.b[0],0,0.99])
+        self.b_fit_param = popt
+        self.unitarity = popt[2]
+        
+        self.report = Report(name="unitarity_randomized_benchmarking")
+        self.report.add_information("fit params for leakage", self.a_fit_param)
+        self.report.add_information("fit params for unitarity", self.b_fit_param)
+        self.report.add_information("unitarity", self.unitarity)
+        self.report.add_information("leakage", self.leakage)
+        self.report.add_information("pauli", self.pauli)
+
+    def visualize(self):
+        popt = self.a_fit_param
+        afit = exp_decay(self.length_list, popt[0], popt[1], popt[2])
+        popt = self.b_fit_param
+        bfit = exp_decay(self.length_list, popt[0], popt[1], popt[2])
+        plt.figure(figsize=(5,5))
+        plt.plot(self.length_list, self.a, "r.", label=f"leakage {self.leakage}")
+        plt.plot(self.length_list, self.b, "b.", label=f"unitarity {self.unitarity}")
+        plt.plot(self.length_list, afit, "r-")
+        plt.plot(self.length_list, bfit, "b-")
+        plt.axhline(0, color="black", linestyle="--")
+        plt.ylim(-1,1)
+        plt.legend()
+        plt.show()
+        
+class FastUnitarityRandomizedBenchmarking:
+    def __init__(
+        self,
+        circuit,
+        qubit_index,
+        group,
+        sequence_list,
+        seed = 0,
+        interleaved = None,
+        ):
+
+        self.name               = "FastUnitarityRandomizedBenchmarking"
+        self.number_of_qubit    = group.num_qubit
+        self.qubit_index        = qubit_index
+        self.seed               = seed
+        self.interleaved        = interleaved
+        self.sequence_list      = sequence_list
+        self.length_list        = np.array(sequence_list).T[0].tolist()
+        self.random_index       = np.array(sequence_list).T[1].tolist()[0]
+        self.report             = Report(name="unitarity_randomized_benchmarking")
+        
+        self.job_table = JobTable(name=self.name)
+        for (length, random, shot) in self.sequence_list:
+            
+            ## generate gate_array ##
+            sequence_array = []
+            rand_gate_array = group.sample(random*(length-1), seed=self.seed)
+            rand_gate_array = rand_gate_array.reshape(random, length-1, 2**self.number_of_qubit, 2**self.number_of_qubit)
+            for rand_gates in rand_gate_array:
+                gate_array = []
+                gate = np.identity(2**self.number_of_qubit)
+                for rand in rand_gates:
+                    gate_array.append(rand)
+                    gate = rand@gate
+                    if self.interleaved is not None:
+                        gate = self.interleaved["gate"]@gate
+                sequence_array.append(gate_array)
+                    
+            ## apply experiment ##
+            for gate_array in sequence_array:
+                cir = copy.deepcopy(circuit)
+                for pos, gate in enumerate(gate_array):
+                    if int(np.log2(gate.shape[0])) == 1:
+                        cir.su2(gate, target=self.qubit_index[0])
+                    if int(np.log2(gate.shape[0])) == 2:
+                        cir.su4(gate, control=self.qubit_index[0], target=self.qubit_index[1])
+                    if interleaved is not None:
+                        if pos != len(gate_array) - 1:
+                            cir.qtrigger(self.qubit_index)
+                            cir.call(self.interleaved["ansatz"])
+                            cir.qtrigger(self.qubit_index)
+                cir.qtrigger(self.qubit_index)
+                cir.measurement_all()
+
+                ## job submition ##
+                condition = {
+                    "length"         : length,
+                    "gate_array"     : gate_array,
+                    "shot"           : shot,
+                    "sequence"       : cir.get_waveform_information(),
+                }
+                self.job_table.submit(Job(condition))
+
+    def execute(self, take_data):
+        take_data(self.job_table)
+        
+    def tmp_analyze(self):
+        self.hist_table = {}
+        for length in self.length_list:
+            self.hist_table[length] = []
+        for job in self.job_table.table:
+            self.hist_table[job.length].append(job.result)
+            
+        self.report.add_information("hist table", self.hist_table)
+        self.report.add_information("sequence", self.sequence_list)
+        self.report.add_information("seed", self.seed)
+        self.report.add_information("qubit index", self.qubit_index)
+
+    def analyze(self):
+        
+        if self.number_of_qubit == 1:
+            pauli = np.array([job.result["0"] - job.result["1"] for job in self.job_table.table])
+        elif self.number_of_qubit == 2:
+            pauli = np.array([job.result["00"] + job.result["11"] - job.result["01"] - job.result["10"] for job in self.job_table.table])
+            
+        pauli = pauli.reshape(len(self.length_list), self.random_index)
+        self.pauli = pauli
+
+        self.b = np.var(pauli, axis=1) #*(4**self.number_of_qubit - 1)
+
+        popt, pcov = curve_fit(exp_decay,self.length_list,self.b,p0=[self.b[0],0,0.99])
+        self.b_fit_param = popt
+        self.unitarity = popt[2]
+        
+        self.report.add_information("fit params for unitarity", self.b_fit_param)
+        self.report.add_information("unitarity", self.unitarity)
+        self.report.add_information("pauli", self.pauli)
+
+    def visualize(self):
+        popt = self.b_fit_param
+        bfit = exp_decay(self.length_list, popt[0], popt[1], popt[2])
+        plt.figure(figsize=(5,5))
+        plt.plot(self.length_list, self.b, "b.", label=f"unitarity {self.unitarity}")
+        plt.plot(self.length_list, bfit, "b-")
+        plt.axhline(0, color="black", linestyle="--")
+        plt.ylim(-1,1)
+        plt.legend()
         plt.show()

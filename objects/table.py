@@ -5,8 +5,9 @@ class Job:
         self.__dict__.update(conditions)
 
 class JobTable:
-    def __init__(self):
+    def __init__(self, name=None):
         self.reset()
+        self.name = name
 
     def submit(self, job):
         self.table.append(job)
